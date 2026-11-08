@@ -1,11 +1,10 @@
+/*
+render cube (no shading or normals) with camera movement capablity
+*/
+
+
 #include <iostream>
-
-#include <GL/glew.h>
-#include <GL/freeglut.h>
-
-#include <../glm/glm.hpp>
-#include <../glm/gtc/matrix_transform.hpp>
-#include <../glm/gtc/type_ptr.hpp>
+#include "viewer.hpp"
 
 GLuint VAO, VBO;
 GLuint shaderProgram;

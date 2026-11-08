@@ -1,8 +1,16 @@
+/*
+Stand-alone program to open a window and generate a static 2-d triangle 
+*/
+
+
 #include <iostream>
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
+// shader files
+
+// feed vertices of triangle into gl
 const char* vertexShaderSource = R"(
 #version 450 core
 
@@ -14,6 +22,7 @@ void main()
 }
 )";
 
+// make triangle red
 const char* fragmentShaderSource = R"(
 #version 450 core
 
@@ -93,6 +102,7 @@ GLuint createShaderProgram(const char* vertexSource, const char* fragmentSource)
     return program;
 }
 
+// display triangle (no camera or object movement)
 void display()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -111,6 +121,7 @@ void display()
 int main(int argc, char* argv[]) 
 {
 
+    // init window
     glutInit(&argc, argv);
 
     glutInitContextVersion(4, 5);
