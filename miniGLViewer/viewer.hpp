@@ -11,6 +11,12 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
     // we are not using texture so we are not including texture coords
+
+    Vertex(int x, int y, int z, int nx, int ny, int nz){
+        position = {x, y, z};
+        normal = {nx, ny, nz};
+        
+    }
 };
 
 
