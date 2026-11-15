@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O0 -g
 LDLIBS = -lGLEW -lglut -lGL
 
-SOURCES = main.cpp mesh.cpp parseSimpleObj.cpp
+SOURCES = main.cpp parseSimpleObj.cpp
 TARGET = viewer
 
 $(TARGET): $(SOURCES)
