@@ -3,8 +3,6 @@ parse obj containing tetrahedron data
 based heavily on tinyobjloader sample code
 */
 
-#include <iostream>
-
 #define TINYOBJLOADER_IMPLEMENTATION // tells timyobj header to include func implementations not just declarations
 #include "../../tinyobjloader/tiny_obj_loader.h"
 
@@ -95,6 +93,8 @@ int parseSingleObj(std::string inputfile, std::vector<Vertex> &vertices, std::ve
 }
 
 
+/*
+
 int main() {
 
     std::vector<Vertex> v;
@@ -140,3 +140,4 @@ int main() {
 
 }
 
+*/

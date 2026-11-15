@@ -2,11 +2,10 @@
 render cube (no shading or normals) with camera movement capablity
 */
 
-
-#include <iostream>
 #include "viewer.hpp"
 
-GLuint VAO, VBO;
+
+GLuint VAO, VBO, EBO;
 GLuint shaderProgram;
 
 GLint modelLoc;
@@ -23,8 +22,17 @@ float rotationY = 0.0f;
 int lastMouseX = 0;
 int lastMouseY = 0;
 
+float cameraDistance = 4.0f;
+glm::vec3 cameraPosition(0.0f, 0.0f, cameraDistance);
+glm::vec3 cameraView(0.0f,0.0f,0.0f);
+
 bool mousePressed = false;
 
+std::vector<Vertex> vertices;
+std::vector<int> indices;
+
+
+/*
 // hard-coded verts for square of side length 1, cnetered at origin
 GLfloat vertices[] = {
     // Front face
@@ -82,12 +90,17 @@ GLfloat vertices[] = {
     -0.5f, -0.5f,  0.5f
 };
 
+*/
+
 // shader files
-// VAO file
+
+// vertex shader (transforms vertices)
 const char* vertexShaderSource = R"(
 #version 450 core
 
-layout (location = 0) in vec3 aPos;
+layout (location = 0) in vec3 aPos; // position data
+layout (location = 1) in vec3 aNormal; // normal data 
+out vec3 FragNormal;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -96,18 +109,23 @@ uniform mat4 projection;
 void main()
 {
     gl_Position = projection * view * model * vec4(aPos, 1.0);
+    FragNormal = mat3(model) * aNormal;
 }
 )";
 
-// VBO file
+// fragment shader (sets pixel value)
 const char* fragmentShaderSource = R"(
 #version 450 core
 
+in vec3 FragNormal;
 out vec4 FragColor;
 
-void main()
-{
-    FragColor = vec4(0.3, 0.0, 0.1, 1.0);
+void main() {
+    vec3 N = normalize(FragNormal);
+    vec3 L = normalize(vec3(2.0, 2.0, 1.0));
+    float diff = max(dot(N, L), 0.0);
+    vec3 color = vec3(0.3, 0.0, 0.1);
+    FragColor = vec4(color * (0.15 + diff), 1.0);
 }
 )";
 
@@ -202,6 +220,12 @@ void display()
         glm::vec3(0.0f, 1.0f, 0.0f) // y-axis
     );
 
+    view = glm::lookAt(
+        cameraPosition, // position of camera
+        cameraView, // where the camera looks
+        glm::vec3(0.0f, 1.0f, 0.0f)// vector corresponding to the up direction
+    );
+
     // Activate shader program
     glUseProgram(shaderProgram);
 
@@ -212,18 +236,54 @@ void display()
 
     // Draw cube
     glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
 
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     glutSwapBuffers();
 }
 
+void updateView() {
+    view = glm::lookAt(cameraPosition, cameraView, glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+
+void keyboard(unsigned char key, int x, int y) 
+{
+    const float step = 0.1f;
+    switch (key) {
+        case 'w': cameraPosition.z -= step; cameraView.z -= step; break; // closer
+        case 's': cameraPosition.z += step; cameraView.z += step; break; // farther
+        case 'a': cameraPosition.x -= step; cameraView.x -= step; break;
+        case 'd': cameraPosition.x += step; cameraView.x += step; break;
+        default: return;
+    }
+    cameraDistance = cameraPosition.z;
+    updateView();
+    glutPostRedisplay();
+}
 
 
 // save current x and y position of mouse when left mouse button pressed
 void mouse(int button, int state, int x, int y)
 {
-    if (button == GLUT_LEFT_BUTTON)
+    if((button == 3) || (button == 4))  // wheel event
+    {
+        // Each wheel event reports like a button click, GLUT_DOWN then GLUT_UP
+        if (state == GLUT_DOWN)
+        {
+            
+        cameraDistance += (button == 3) ? -0.25f : 0.25f;
+        if (cameraDistance < 0.5f) cameraDistance = 0.5f; // distance should not be zero
+        cameraPosition[2] = cameraDistance;
+
+        updateView();
+        glutPostRedisplay();
+
+        }
+    } 
+    
+    else if (button == GLUT_LEFT_BUTTON) // left button pressed
     {
         if (state == GLUT_DOWN)
         {
@@ -234,7 +294,7 @@ void mouse(int button, int state, int x, int y)
             lastMouseY = y;
         }
 
-        else if (state == GLUT_UP)
+        else if (state == GLUT_UP) // button no longer pressed
         {
             mousePressed = false;
         }
@@ -259,6 +319,7 @@ void mouseMotion(int x, int y)
         glutPostRedisplay();
     }
 }
+
 
 
 // refactors projection matrix when window is resized
@@ -288,6 +349,17 @@ void reshape(int width, int height)
 
 int main(int argc, char* argv[])
 {
+
+    // parse object data from "tetrahedron.obj"
+    std::string filename = "tetrahedron.obj";
+
+    int num_verts = parseSingleObj(filename, vertices, indices);
+    if(num_verts < 0) { 
+        std::cout << "failed to retrieve info from " << filename << "\n"; 
+        return 0;
+    }
+
+    // init glut
     glutInit(&argc, argv);
 
     glutInitContextVersion(4, 5);
@@ -296,6 +368,7 @@ int main(int argc, char* argv[])
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutInitWindowSize(800, 600);
     glutCreateWindow("MiniGLViewer");
+
 
     // Initialize GLEW
     glewExperimental = GL_TRUE;
@@ -306,6 +379,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
 
@@ -315,17 +389,44 @@ int main(int argc, char* argv[])
     // Create VAO and VBO
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
 
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE,
-        3 * sizeof(GLfloat), (void*)0
+    glBufferData(GL_ARRAY_BUFFER, 
+        vertices.size() * sizeof(Vertex), 
+        vertices.data(), 
+        GL_STATIC_DRAW
     );
 
+    glBufferData(GL_ARRAY_BUFFER, 
+        vertices.size() * sizeof(Vertex), 
+        vertices.data(), 
+        GL_STATIC_DRAW
+    );
+
+    // add position attribute to VAO
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex),
+        (void*)offsetof(Vertex, position)
+    );
+    glEnableVertexAttribArray(0);
+
+    // add normal attribute to VAO
+    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex),
+        (void*)offsetof(Vertex, normal)
+    );
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+        indices.size() * sizeof(unsigned int),
+        indices.data(),
+        GL_STATIC_DRAW
+    );
+    
     glEnableVertexAttribArray(0);
 
     // Create shader program
@@ -357,6 +458,7 @@ int main(int argc, char* argv[])
     // Register callbacks
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
+    glutKeyboardFunc(keyboard);
     glutMouseFunc(mouse);
     glutMotionFunc(mouseMotion);
 
