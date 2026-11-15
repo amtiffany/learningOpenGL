@@ -10,19 +10,21 @@ based heavily on tinyobjloader sample code
 
 #include "viewer.hpp"
 
-// parse a single obj from a .obj file
-// return: vector of type Vertex containing the data from the .obj file
-std::vector<Vertex> parseSingleObj() {
-
-    std::string inputfile = "tetrahedron.obj";
+// parse a single obj from .obj file
+// param inputfile: path to file to parse
+// param vertices:  empty vector of type Vertex, stores the position/texture/normal of each vertex in the .obj
+// param indices:   empty vector of type int, stores the indices of the p/t/n for the verts in each face 
+//       format:    indices[i] -> index of position in vertices array
+//                  indices[i + 1] -> index of texture in vertices array (left as -1 if no texture)
+//                  indices[i + 2] -> index of normals in vertices array
+// return: number of vertices
+int parseSingleObj(std::string inputfile, std::vector<Vertex> &vertices, std::vector<int> &indices) {
 
     tinyobj::ObjReaderConfig config;
     config.triangulate = true;
     printf("initing reader.....\n");
     tinyobj::ObjReader reader;
 
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
     int num_verts = -1;
     printf("init complete\n");
     
@@ -30,7 +32,7 @@ std::vector<Vertex> parseSingleObj() {
     if (!reader.ParseFromFile(inputfile, config))
     {
         std::cerr << reader.Error() << "\n";
-        return vertices;
+        return -1;
     }
 
     if (!reader.Warning().empty()) { std::cerr << reader.Warning() << "\n"; }
@@ -39,8 +41,6 @@ std::vector<Vertex> parseSingleObj() {
     const auto& shapes = reader.GetShapes();
     const auto& materials = reader.GetMaterials();
     printf("got info from reader\n");
-
-
 
     // loop over shapes (we should only have one but i left it in for the future)
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -54,9 +54,11 @@ std::vector<Vertex> parseSingleObj() {
 
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
                 
-                printf("vertex index = %d\n", idx.vertex_index);
-                printf("normal index = %d\n", idx.normal_index);
+                indices.push_back(idx.vertex_index);
+                indices.push_back(-1); // no tex index
+                indices.push_back(idx.normal_index);
                 
+
                 vertices.push_back(Vertex(0,0,0,0,0,0));
                 num_verts++;
                 
@@ -76,8 +78,6 @@ std::vector<Vertex> parseSingleObj() {
                 }
 
                 // ignore texcoord
-
-
                 
             }
 
@@ -89,7 +89,7 @@ std::vector<Vertex> parseSingleObj() {
         
     }
 
-    return vertices;
+    return num_verts;
 
 
 }
@@ -97,31 +97,46 @@ std::vector<Vertex> parseSingleObj() {
 
 int main() {
 
-    std::vector<Vertex> v = parseSingleObj();
+    std::vector<Vertex> v;
+    std::vector<int> i;
+    std::string filename = "tetrahedron.obj";
+    int ret = parseSingleObj(filename, v, i);
+    if(ret < 0) printf("failed to retrieve info from %s", filename);
 
-    printf("\n~~~printing vertices~~~\n\n");
+
+    printf("\n~~~printing face indices~~~\n");
+    printf("pos/tex/normal\n\n");
+
+    if (i.size() == 0) {
+        printf("no indices to display\n\n");
+    }
+
+    for (size_t j = 0; j < i.size(); j += 3) {
+        printf("%d/%d/%d\n", i[j], i[j + 1], i[j + 2]);
+    }
+
+    printf("~~~printing vertices~~~\n\n");
 
     if (v.size() == 0) {
         printf("no vertices to display\n");
     }
 
-    for (int i = 0; i< v.size(); i++) {
-        printf("vertex %d position: (%f, %f, %f)\n", 
-            i,
-            v[i].position[0],
-            v[i].position[1],
-            v[i].position[2]
+    for (int j = 0; j< v.size(); j++) {
+        printf("vertex %d\n position: (%f, %f, %f)\n", 
+            j,
+            v[j].position[0],
+            v[j].position[1],
+            v[j].position[2]
         );        
         
         
         printf("normals: (%f, %f, %f)\n\n", 
-            v[i].normal[0],
-            v[i].normal[1],
-            v[i].normal[2]
+            v[j].normal[0],
+            v[j].normal[1],
+            v[j].normal[2]
         );
     }
 
 
-
-
 }
+

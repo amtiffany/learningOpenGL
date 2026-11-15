@@ -20,3 +20,6 @@ struct Vertex {
 };
 
 
+
+// parse an object file into a list of Vertex
+int parseSingleObj(std::string inputfile, std::vector<Vertex> &vertices, std::vector<int> &indices);
