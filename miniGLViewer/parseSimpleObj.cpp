@@ -23,14 +23,14 @@ int parseSingleObj(std::string inputfile, std::vector<Vertex> &vertices, std::ve
     printf("initing reader.....\n");
     tinyobj::ObjReader reader;
 
-    int num_verts = -1;
+    int num_verts = 0;
     printf("init complete\n");
     
 
     if (!reader.ParseFromFile(inputfile, config))
     {
         std::cerr << reader.Error() << "\n";
-        return -1;
+        return 0;
     }
 
     if (!reader.Warning().empty()) { std::cerr << reader.Warning() << "\n"; }
@@ -58,7 +58,6 @@ int parseSingleObj(std::string inputfile, std::vector<Vertex> &vertices, std::ve
                 
 
                 vertices.push_back(Vertex(0,0,0,0,0,0));
-                num_verts++;
                 
                 // add vertex
                 vertices[num_verts].position[0] = attrib.vertices[3*size_t(idx.vertex_index)+0];
@@ -76,6 +75,7 @@ int parseSingleObj(std::string inputfile, std::vector<Vertex> &vertices, std::ve
                 }
 
                 // ignore texcoord
+                num_verts++;
                 
             }
 
